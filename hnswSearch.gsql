@@ -40,6 +40,7 @@ FOR GRAPH Hnsw RETURNS (SET<Vertex<RootNode>>) SYNTAX V2 {
     END;
 
     @@W.clear();
+    /* Pop the K nearest neighbors from ef candidates */
     WHILE @@knnresult.size() >0 DO
         @@W += @@knnresult.pop().node;
     END;

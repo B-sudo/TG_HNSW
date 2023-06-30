@@ -52,7 +52,7 @@ FOR GRAPH Hnsw RETURNS (SET<Vertex<RootNode>>) SYNTAX V2 {
             POST-ACCUM IF (@@result.size() < ef OR e.@dis < @@result.top().distance)
                     THEN @@candidate += Vertex_Item(e, e.@dis),
                     @@result += Vertex_Item(e, e.@dis)
-                    END;
+                    END;        /* If e is close enough to q or @@result just needs some elements */
         
         WHILE @@result.size() > ef DO
             @@result.pop();
@@ -104,6 +104,7 @@ FOR GRAPH Hnsw RETURNS (SET<Vertex<RootNode>>) SYNTAX V2 {
         OrAccum @@close_to_R = FALSE;
 
         seed = @@result;
+        /* If @@enode is closer to one of currently selected vertexs, than we discard it to avoid clustering */
         a = SELECT s FROM seed:s
             ACCUM IF vector_distance_euclidean_straight(s, @@enode) < @@edis
                 THEN @@close_to_R += TRUE
