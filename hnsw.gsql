@@ -1,0 +1,21 @@
+/* Define Schema of HNSW */
+@hnswSchema.gsql
+
+/* Load Vertex data and Branch data */ 
+@hnswLoad.gsql
+
+/*Define the query used to compute the distance between vectors */
+@hnswDistance.gsql
+
+/*Define two subqueries used in Insertion and KNN-Search */
+@hnswSubSearch.gsql
+
+@hnswInsert.gsql
+
+@hnswSearch.gsql
+
+@hnswDelete.gsql
+
+@hnswTest.gsql
+
+

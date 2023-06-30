@@ -1,0 +1,107 @@
+USE GRAPH Hnsw
+
+CREATE QUERY hnsw_insert(VERTEX<RootNode> q, INT M, INT efConstruction, FLOAT mL) 
+FOR GRAPH Hnsw SYNTAX V2 {
+
+    /*
+    Input: Query Vertex q
+        Maximum number of connections for each element per layer M
+        Size of the dynamic candidate list efConstruction
+        Normalization factor for level generation mL
+    */
+
+    TYPEDEF TUPLE <INT ep_id, INT top_level> Meta_Data;
+
+    INT cur_ep_id;
+    INT cur_top_level; /*current ep meta data of HNSW graph*/
+    BOOL first_insert = FALSE;
+    MaxAccum<INT> @@l;
+    MaxAccum<INT> @@query_id;
+    SetAccum<Vertex<RootNode>> @@entry_point;
+
+    @@l += floor(-log(1-rand()) * mL);
+
+    S = {q};
+
+    b = SELECT s FROM S:s
+        POST-ACCUM s.maxlevel = @@l,
+            @@query_id += s.id;         //O(1)
+
+    a = SELECT m FROM MetaNode:m
+        POST-ACCUM IF m.empty
+                THEN INSERT INTO EpLink VALUES (m MetaNode, q RootNode),
+                m.empty = FALSE,
+                first_insert = TRUE
+            END;
+
+
+    IF first_insert        /* The first inserted vector */
+        THEN  PRINT first_insert; RETURN ;
+    END;
+
+    a = SELECT m FROM MetaNode:m -(EpLink:e)- RootNode:u
+        ACCUM @@entry_point += u,
+            cur_ep_id = u.id,
+            cur_top_level = u.maxlevel,
+            IF @@l > cur_top_level
+                THEN DELETE(e),
+                    INSERT INTO EpLink VALUES (m MetaNode, q RootNode)
+            END;
+    PRINT @@entry_point;
+
+    SetAccum<Vertex<RootNode>> @@W;
+    /* cur_top_level == 4, new vector level  == 2, [4,3] */
+    FOREACH cur_level IN RANGE[cur_top_level, @@l + 1].step(-1) DO
+        @@W.clear();
+        @@W = hnsw_search_layer(q, @@entry_point, 1, cur_level);
+        @@entry_point.clear();
+        @@entry_point = @@W;
+        PRINT @@entry_point;
+    END;            //e ...
+
+    MinAccum<INT> @@min_l;
+    @@min_l += @@l;
+    @@min_l += cur_top_level;
+
+    SetAccum<Vertex<RootNode>> @eConn;
+    SetAccum<Vertex<RootNode>> @eNewConn;
+    SetAccum<Vertex<RootNode>> @eMinusConn;
+
+    FOREACH cur_level IN RANGE[@@min_l, 0].step(-1) DO
+        MaxAccum<INT> @@Mmax;
+        IF cur_level == 0 THEN @@Mmax = 2*M; ELSE @@Mmax = M; END;
+
+        @@W.clear();
+        @@W = hnsw_search_layer(q, @@entry_point, efConstruction, cur_level);
+        neighbors = hnsw_select_neighbors_heuristic(q, @@W, @@Mmax, cur_level, FALSE, TRUE);
+        PRINT @@W;
+        b = SELECT e FROM neighbors:e
+            POST-ACCUM e.@eConn.clear(),
+                e.@eNewConn.clear(),
+                e.@eMinusConn.clear(),
+                e.@eConn += q;
+
+        b = SELECT e FROM neighbors:e - (Link:u) - RootNode:s
+            WHERE u.level == cur_level
+            ACCUM 
+                e.@eConn += s,      //store all neighbors of e to e.@eConn
+                INSERT INTO Link VALUES (e RootNode, q RootNode, cur_level);
+
+         b = SELECT e FROM neighbors:e
+                ACCUM
+                    IF e.@eConn.size() > @@Mmax // if the number of neighbors of e is too large, shrink
+                    THEN e.@eNewConn = hnsw_select_neighbors_heuristic(q, e.@eConn, @@Mmax, cur_level, FALSE, TRUE),
+                        e.@eMinusConn = e.@eConn MINUS e.@eNewConn  //get links to be deleted
+                    END;
+
+        /* Delete redundent links of neighbors*/
+        b = SELECT e FROM neighbors:e - (Link:u) - RootNode:s
+            WHERE u.level == cur_level AND e.@eMinusConn.contains(s)
+            ACCUM DELETE(u);
+
+        @@entry_point.clear();
+        @@entry_point = @@W;
+    END;
+}
+
+INSTALL QUERY hnsw_insert

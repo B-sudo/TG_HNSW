@@ -1,0 +1,48 @@
+USE GRAPH Hnsw
+
+CREATE QUERY hnsw_test(INT K, INT ef) 
+FOR GRAPH Hnsw SYNTAX V2 {
+
+    TYPEDEF TUPLE <node Vertex, distance Float> Vertex_Item;
+
+    SetAccum<Vertex<RootNode>> @@appro_set;
+    SetAccum<Vertex<RootNode>> @@truth_set;
+    SetAccum<Vertex<RootNode>> @@queryset;
+    SetAccum<Vertex<RootNode>> @@intersec_set;
+    HeapAccum<Vertex_Item>(K, distance ASC) @@truth_heap;
+    AvgAccum @@recall;
+
+    a = SELECT v FROM RootNode:v 
+        WHERE v.base == FALSE
+        ACCUM @@queryset += v;
+
+    FOREACH q in @@queryset DO
+        INT i;
+        @@appro_set.clear();
+        @@truth_set.clear();
+        @@truth_heap.clear();
+        @@intersec_set.clear();
+
+        @@appro_set = hnsw_knn_search(q, K, ef);
+
+        a = SELECT s FROM RootNode:s
+            WHERE s.base == TRUE
+            ACCUM @@truth_heap += Vertex_Item(s, vector_distance_euclidean_straight(s, q));
+
+        WHILE @@truth_heap.size() > 0 DO
+            @@truth_set += @@truth_heap.pop().node;
+        END;
+
+        @@intersec_set = @@appro_set INTERSECT @@truth_set;
+
+        i = @@intersec_set.size();
+
+        @@recall += i/K;
+    END;
+
+    PRINT @@recall;
+    PRINT @@appro_set;
+    PRINT @@truth_set;
+}
+
+INSTALL QUERY hnsw_test
