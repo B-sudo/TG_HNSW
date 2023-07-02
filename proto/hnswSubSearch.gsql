@@ -100,12 +100,12 @@ FOR GRAPH Hnsw RETURNS (SET<Vertex<RootNode>>) SYNTAX V2 {
     WHILE (@@work_queue.size() > 0 AND @@result.size() < M) DO
         
         MaxAccum<FLOAT> @@edis = @@work_queue.top().distance;
-        enode_start = {@@work_queue.top().node};
         MaxAccum<Vertex> @@enode = @@work_queue.pop().node;
         ListAccum<DOUBLE> @@enode_embedding;
         OrAccum @@close_to_R = FALSE;
 
-        a = SELECT s FROM enode_start:s
+        a = SELECT s FROM RootNode:s
+            WHERE s == @@enode
             ACCUM @@enode_embedding += s.embedding;
 
         seed = @@result;
@@ -116,8 +116,8 @@ FOR GRAPH Hnsw RETURNS (SET<Vertex<RootNode>>) SYNTAX V2 {
                 END;
 
         IF NOT @@close_to_R
-            THEN @@result += enode;
-        ELSE @@discard_queue += Vertex_Item(enode, @@edis);
+            THEN @@result += @@enode;
+        ELSE @@discard_queue += Vertex_Item(@@enode, @@edis);
         END;
     END;
 

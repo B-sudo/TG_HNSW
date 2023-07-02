@@ -27,7 +27,7 @@ FOR GRAPH Hnsw SYNTAX V2 {
 
         a = SELECT s FROM RootNode:s
             WHERE s.base == TRUE
-            ACCUM @@truth_heap += Vertex_Item(s, vector_distance_euclidean_straight(s, q));
+            ACCUM @@truth_heap += Vertex_Item(s, vector_distance_euclidean_straight(s.embedding, q.embedding, s.dim));
 
         WHILE @@truth_heap.size() > 0 DO
             @@truth_set += @@truth_heap.pop().node;

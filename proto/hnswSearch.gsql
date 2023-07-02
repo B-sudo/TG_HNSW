@@ -36,7 +36,7 @@ FOR GRAPH Hnsw RETURNS (SET<Vertex<RootNode>>) SYNTAX V2 {
     @@W = hnsw_search_layer(q, @@entry_point, ef, 0);
 
     FOREACH item IN @@W DO
-        @@knnresult += Vertex_Item(item, vector_distance_euclidean_straight(item, q));
+        @@knnresult += Vertex_Item(item, vector_distance_euclidean_straight(item.embedding, q.embedding, item.dim));
     END;
 
     @@W.clear();
