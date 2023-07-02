@@ -1,0 +1,13 @@
+USE GRAPH Hnsw
+
+CREATE LOADING JOB loading FOR GRAPH Hnsw {
+   DEFINE FILENAME file0 = "/home/tigergraph/mydata/metanode.csv";
+   DEFINE FILENAME file1 = "/home/tigergraph/mydata/rootnode.csv";
+
+   LOAD file0 TO VERTEX MetaNode VALUES ($0, $1, $2);
+   LOAD file1 TO VERTEX RootNode VALUES ($0, $1, $2, $3, SPLIT($4,"#"));
+   #LOAD file2 TO VERTEX VecNode VALUES ($0, $1, $2);
+   #LOAD file3 TO EDGE Branch VALUES ($0, ($1,$2));
+}
+
+RUN LOADING JOB loading

@@ -1,0 +1,13 @@
+USE GRAPH Hnsw
+
+CREATE QUERY show_edge(INT id, INT level) 
+FOR GRAPH Hnsw SYNTAX V2 {
+    SetAccum<Vertex> @@result;
+    a = SELECT s FROM RootNode:s - (Link:u) - RootNode:v
+        WHERE s.id == id AND u.level == level
+        ACCUM @@result += v;
+
+    PRINT @@result;
+}
+
+INSTALL QUERY show_edge

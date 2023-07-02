@@ -1,0 +1,95 @@
+USE GRAPH Hnsw
+
+CREATE QUERY test_meta(INT id, FLOAT mL) 
+FOR GRAPH Hnsw RETURNS (INT) SYNTAX V2 {
+
+    TYPEDEF TUPLE <INT ep_id, INT top_level> Meta_Data;
+
+    //MaxAccum<Meta_Data> @@meta; /*current meta data of HNSW graph*/
+    INT cur_ep_id;
+    INT cur_top_level;
+    MaxAccum<INT> @@l;
+    MaxAccum<INT> @@query_id;
+
+    a = SELECT m FROM MetaNode:m
+        ACCUM cur_ep_id = m.ep_id,
+            cur_top_level = m.top_level;//@@meta += Meta_Data(m.ep_id, m.top_level);
+
+    @@l += floor(-log(1-rand()) * mL);
+
+    b = SELECT s FROM RootNode:s 
+        WHERE s.id == id
+        POST-ACCUM s.maxlevel = @@l,
+            @@query_id += s.id;
+
+    /* The first inserted vector */
+    IF cur_ep_id == -1//@@meta.ep_id == -1
+        THEN UPDATE m FROM MetaNode:m
+                SET m.ep_id = @@query_id,
+                    m.top_level = @@l;
+    END;
+    RETURN cur_ep_id;
+}
+
+
+
+CREATE QUERY seq_meta()
+FOR GRAPH Hnsw SYNTAX V2 {
+    PRINT test_meta(0, 0.8);
+    PRINT test_meta(1, 0.8);
+    PRINT test_meta(2, 0.8);
+    PRINT test_meta(3, 0.8);
+    PRINT test_meta(4, 0.8);
+    PRINT test_meta(5, 0.8);
+    PRINT test_meta(6, 0.8);
+    PRINT test_meta(7, 0.8);
+    PRINT test_meta(8, 0.8);
+    PRINT test_meta(9, 0.8);
+    PRINT test_meta(10, 0.8);
+    PRINT test_meta(11, 0.8);
+    PRINT test_meta(12, 0.8);
+    PRINT test_meta(13, 0.8);
+    PRINT test_meta(14, 0.8);
+    PRINT test_meta(15, 0.8);
+    PRINT test_meta(16, 0.8);
+    PRINT test_meta(17, 0.8);
+    PRINT test_meta(18, 0.8);
+    PRINT test_meta(19, 0.8);
+    PRINT test_meta(20, 0.8);
+}
+
+CREATE QUERY test_meta_attr(INT id) 
+FOR GRAPH Hnsw SYNTAX V2 {
+    TYPEDEF TUPLE <INT ep_id, INT top_level> Meta_Data;
+    MaxAccum<Meta_Data> @@meta;
+    INT cur_ep_id;
+    INT cur_top_level;
+    MaxAccum<INT> @@l;
+    MaxAccum<INT> @@query_id;
+
+    /* first read */
+    a = SELECT m FROM MetaNode:m
+        ACCUM cur_ep_id = m.ep_id,
+            cur_top_level = m.top_level,
+            @@meta += Meta_Data(m.ep_id, m.top_level);
+    
+    PRINT cur_ep_id, cur_top_level, @@meta;
+
+    @@l += floor(-log(1-rand()) * 0.8);
+    @@query_id += id;
+
+    UPDATE m FROM MetaNode:m
+        SET m.ep_id = @@query_id,
+            m.top_level = @@l;
+    /* second read */
+    a = SELECT m FROM MetaNode:m
+        ACCUM cur_ep_id = m.ep_id,
+            cur_top_level = m.top_level,
+            @@meta += Meta_Data(m.ep_id, m.top_level);
+    
+    PRINT cur_ep_id, cur_top_level, @@meta;
+
+}
+INSTALL QUERY test_meta
+INSTALL QUERY seq_meta
+INSTALL QUERY test_meta_attr

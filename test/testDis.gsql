@@ -1,0 +1,26 @@
+USE GRAPH Hnsw
+
+CREATE QUERY test_distance(Vertex<RootNode> ve1, Vertex<RootNode> ve2) 
+FOR GRAPH Hnsw  SYNTAX V2 {
+    start1 = {ve1};
+    start2 = {ve2};
+    ListAccum<DOUBLE> @@list1,@@list2;
+    MaxAccum<INT> @@dim;
+    a = SELECT s FROM start1:s 
+        ACCUM @@list1 += s.embedding,
+            @@dim += s.dim;
+    a = SELECT s FROM start2:s 
+        ACCUM @@list2 += s.embedding;
+    DATETIME before;
+	  
+	before = now();
+	
+    FOREACH i IN RANGE[0,99999999] DO
+        vector_distance_euclidean_straight(@@list1,@@list2,@@dim);
+    END;
+    
+    PRINT("Test Dis took " + to_string(datetime_diff(now(), before)) + " seconds") AS timing;
+
+}
+
+INSTALL QUERY test_distance

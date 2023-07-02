@@ -1,0 +1,17 @@
+USE GLOBAL
+
+DROP ALL
+
+CREATE VERTEX MetaNode (PRIMARY_ID id INT, ep_id INT, top_level INT)
+
+/* A RootNode represents a vector. 
+The value of a vector in each dimension is stored in VecNode 
+TRUE for base means that it is a base vector and will be inserted to HNSW graph*/
+
+CREATE VERTEX RootNode (id INT PRIMARY KEY, maxlevel INT, dim INT, base BOOL, embedding LIST<DOUBLE>)
+
+CREATE UNDIRECTED EDGE EpLink (FROM MetaNode, TO RootNode)
+
+CREATE UNDIRECTED EDGE Link (FROM RootNode, TO RootNode, DISCRIMINATOR(level INT))
+
+CREATE GRAPH Hnsw (*)

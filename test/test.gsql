@@ -1,0 +1,19 @@
+USE GRAPH Hnsw
+
+CREATE QUERY test_distance() 
+FOR GRAPH Hnsw SYNTAX V2 {
+    MaxAccum<Vertex> @@v1, @@v2;
+
+    a = SELECT s FROM RootNode:s
+        WHERE s.id == 0
+        ACCUM @@v1 += s;
+    
+    a = SELECT s FROM RootNode:s
+        WHERE s.id == 1
+        ACCUM @@v2 += s;
+
+    FLOAT eu_distance = vector_distance_euclidean_straight(@@v1, @@v2);
+    PRINT eu_distance;
+}
+
+INSTALL QUERY test_distance

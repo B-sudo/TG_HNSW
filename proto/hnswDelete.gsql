@@ -1,0 +1,14 @@
+USE GRAPH Hnsw
+
+CREATE QUERY hnsw_delete() 
+FOR GRAPH Hnsw SYNTAX V2 {
+    all = {ANY};
+
+    results = SELECT a FROM all:a - (:e) - ANY
+        ACCUM
+            DELETE(e)
+        POST-ACCUM
+            DELETE(a);
+}
+
+INSTALL QUERY hnsw_delete

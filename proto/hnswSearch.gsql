@@ -1,0 +1,51 @@
+USE GRAPH Hnsw
+
+CREATE QUERY hnsw_knn_search(VERTEX<RootNode> q, INT K, INT ef) 
+FOR GRAPH Hnsw RETURNS (SET<Vertex<RootNode>>) SYNTAX V2 {
+
+    /*
+    Input: Query Vertex q 
+        Number of nearest neighbors to return K
+        Size of the dynamic candidate list ef
+    Output: K nearest elements to q
+    */
+
+    TYPEDEF TUPLE <INT ep_id, INT top_level> Meta_Data;
+    TYPEDEF TUPLE <node Vertex, distance Float> Vertex_Item;
+
+    MaxAccum<Meta_Data> @@meta; /*current meta data of HNSW graph*/
+    SetAccum<Vertex<RootNode>> @@entry_point;
+    SetAccum<Vertex<RootNode>> @@W;
+    HeapAccum<Vertex_Item>(K, distance ASC) @@knnresult;
+
+    a = SELECT m FROM MetaNode:m
+        ACCUM @@meta += Meta_Data(m.ep_id, m.top_level);
+
+    b = SELECT s FROM RootNode:s
+        WHERE s.id == @@meta.ep_id
+        ACCUM @@entry_point += s;
+
+    FOREACH cur_level IN RANGE[@@meta.top_level, 1].step(-1) DO
+        @@W.clear();
+        @@W = hnsw_search_layer(q, @@entry_point, 1, cur_level);
+        @@entry_point.clear();
+        @@entry_point = @@W;
+    END;
+
+    @@W.clear();
+    @@W = hnsw_search_layer(q, @@entry_point, ef, 0);
+
+    FOREACH item IN @@W DO
+        @@knnresult += Vertex_Item(item, vector_distance_euclidean_straight(item, q));
+    END;
+
+    @@W.clear();
+    /* Pop the K nearest neighbors from ef candidates */
+    WHILE @@knnresult.size() >0 DO
+        @@W += @@knnresult.pop().node;
+    END;
+
+    RETURN @@W;
+}
+
+INSTALL QUERY hnsw_knn_search
