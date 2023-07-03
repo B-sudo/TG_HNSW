@@ -1,0 +1,59 @@
+CREATE QUERY q2_explore(
+  UINT sample_num=3,
+  UINT min_level=2
+) FOR GRAPH HNSW {
+  SetAccum<EDGE> @@edge_set;
+  Nodes = {EntryPoint.*};
+  Nodes =
+    SELECT t
+    FROM   Nodes:s -(entrypoint_element:e)- :t
+    ACCUM  @@edge_set += e
+  ;
+  Nodes =
+    SELECT t
+    FROM   Nodes:s -(link_to_level_5:e)- :t
+    SAMPLE sample_num EDGE WHEN s.outdegree("link_to_level_5") >= sample_num
+    ACCUM  @@edge_set += e
+  ;
+  IF min_level > 4 THEN
+    PRINT @@edge_set;
+    RETURN;
+  END;
+  Nodes =
+    SELECT t
+    FROM   Nodes:s -(link_to_level_4:e)- :t
+    SAMPLE sample_num EDGE WHEN s.outdegree("link_to_level_5") >= sample_num
+    ACCUM  @@edge_set += e
+  ;
+  IF min_level > 3 THEN
+    PRINT @@edge_set;
+    RETURN;
+  END;
+  Nodes =
+    SELECT t
+    FROM   Nodes:s -(link_to_level_3:e)- :t
+    SAMPLE sample_num EDGE WHEN s.outdegree("link_to_level_5") >= sample_num
+    ACCUM  @@edge_set += e
+  ;
+  IF min_level > 2 THEN
+    PRINT @@edge_set;
+    RETURN;
+  END;
+  Nodes =
+    SELECT t
+    FROM   Nodes:s -(link_to_level_2:e)- :t
+    SAMPLE sample_num EDGE WHEN s.outdegree("link_to_level_5") >= sample_num
+    ACCUM  @@edge_set += e
+  ;
+  IF min_level > 1 THEN
+    PRINT @@edge_set;
+    RETURN;
+  END;
+  Nodes =
+    SELECT t
+    FROM   Nodes:s -(link_to_level_1:e)- :t
+    SAMPLE sample_num EDGE WHEN s.outdegree("link_to_level_5") >= sample_num
+    ACCUM  @@edge_set += e
+  ;
+  PRINT @@edge_set;
+}

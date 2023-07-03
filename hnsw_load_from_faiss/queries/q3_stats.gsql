@@ -1,0 +1,13 @@
+CREATE QUERY q3_stats(
+) FOR GRAPH HNSW {
+  MapAccum<INT, SumAccum<INT>> @@map;
+  Nodes = {Element.*};
+  Nodes =
+    SELECT t
+    FROM   Nodes:s -(link_to:e)- :t
+    ACCUM  FOREACH level IN e.level_set DO
+             @@map += (level -> 1)
+           END
+  ;
+  PRINT @@map;
+}

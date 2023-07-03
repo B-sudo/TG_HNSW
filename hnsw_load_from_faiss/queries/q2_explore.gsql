@@ -1,0 +1,33 @@
+CREATE QUERY q2_explore(
+  UINT min_level=2
+) FOR GRAPH HNSW {
+  SetAccum<EDGE> @@edge_set;
+  MaxAccum<INT> @@max_level;
+  Nodes = {EntryPoint.*};
+  Nodes =
+    SELECT t
+    FROM   Nodes:s -(entrypoint_element:e)- :t
+    ACCUM  @@edge_set += e
+  ;
+  Nodes =
+    SELECT s
+    FROM   Nodes:s -(link_to:e)- :t
+    ACCUM  FOREACH item IN e.level_set DO
+             @@max_level += item
+           END
+  ;
+  INT level = @@max_level;
+  WHILE level >= 1 DO
+    Nodes =
+      SELECT t
+      FROM   Nodes:s -(link_to:e)- :t
+      WHERE  level IN e.level_set
+      ACCUM  @@edge_set += e
+    ;
+    level = level - 1;
+    IF level < min_level THEN
+      PRINT @@edge_set;
+      RETURN;
+    END;
+  END;
+}

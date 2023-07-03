@@ -1,0 +1,18 @@
+# 1. Use graph
+USE GRAPH HNSW
+
+# 2. Create loading job
+SET sys.data_root="~/data/hnsw/hnsw"
+CREATE LOADING JOB loading_job FOR GRAPH HNSW{
+  DEFINE FILENAME f1 = "$sys.data_root/entry_point.csv";
+  DEFINE FILENAME f2 = "$sys.data_root/edges.csv";
+
+  LOAD f1 TO EDGE entrypoint_element VALUES(0, $0) USING SEPARATOR=",", HEADER="false", EOL="\n", QUOTE="DOUBLE";
+  LOAD f2 TO EDGE link_to VALUES($0, $1, $2) USING SEPARATOR=",", HEADER="false", EOL="\n", QUOTE="DOUBLE";
+}
+
+# 3. Run loading job
+RUN LOADING JOB loading_job
+
+# 4. Drop loading job
+DROP JOB loading_job

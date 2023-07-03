@@ -1,0 +1,150 @@
+CREATE QUERY q1_search_vis(
+  STRING input="1.0,3.0,11.0,110.0,62.0,22.0,4.0,0.0,43.0,21.0,22.0,18.0,6.0,28.0,64.0,9.0,11.0,1.0,0.0,0.0,1.0,40.0,101.0,21.0,20.0,2.0,4.0,2.0,2.0,9.0,18.0,35.0,1.0,1.0,7.0,25.0,108.0,116.0,63.0,2.0,0.0,0.0,11.0,74.0,40.0,101.0,116.0,3.0,33.0,1.0,1.0,11.0,14.0,18.0,116.0,116.0,68.0,12.0,5.0,4.0,2.0,2.0,9.0,102.0,17.0,3.0,10.0,18.0,8.0,15.0,67.0,63.0,15.0,0.0,14.0,116.0,80.0,0.0,2.0,22.0,96.0,37.0,28.0,88.0,43.0,1.0,4.0,18.0,116.0,51.0,5.0,11.0,32.0,14.0,8.0,23.0,44.0,17.0,12.0,9.0,0.0,0.0,19.0,37.0,85.0,18.0,16.0,104.0,22.0,6.0,2.0,26.0,12.0,58.0,67.0,82.0,25.0,12.0,2.0,2.0,25.0,18.0,8.0,2.0,19.0,42.0,48.0,11.0",
+  UINT k=10,
+  UINT ef_search=32,
+  UINT hop = 1,
+  UINT max_level=5,
+  UINT dim=128
+) FOR GRAPH HNSW {
+  TYPEDEF TUPLE<VERTEX<Element> element, DOUBLE dist> MyTuple;
+  OrAccum @visited;
+  SumAccum<DOUBLE> @distance;
+  HeapAccum<MyTuple>(1, dist ASC) @@min_heap;
+  MaxAccum<DOUBLE> @@max_dist;
+  SetAccum<VERTEX<Element>> @@visited_nodes;
+  SetAccum<EDGE> @@edge_set;
+  ListAccum<INT> @@input_x;
+  DOUBLE prev_max_dist;
+  INT d = dim - 1;
+  INT ef = ef_search;
+  IF k > ef THEN
+    ef = k;
+  END;
+
+  @@input_x = split(input, ",");
+
+  // get entry point
+  Nodes = {EntryPoint.*};
+  Nodes =
+    SELECT t
+    FROM   Nodes:s -(entrypoint_element:e)- :t
+    ACCUM  @@edge_set += e
+    POST-ACCUM
+           t.@visited = TRUE,
+           FOREACH i IN RANGE[0, d] DO
+             t.@distance += pow(@@input_x.get(i) - t.x.get(i), 2)
+           END,
+           @@min_heap += MyTuple(t, t.@distance),
+           @@visited_nodes += t
+  ;
+  @@max_dist = @@min_heap.top().dist;
+  PRINT Nodes[Nodes.@distance];
+  INT level = max_level;
+
+  // find the closest element at each layer by the greedy search algorithm
+  Ep = Nodes;
+  WHILE level > 1 DO
+    // greedily traverse through the elements until a local minimum is reached
+    Nodes = Ep;
+    WHILE Nodes.size() > 0 DO
+      // evaluate the neighborhood of the closest previously non-evaluated element
+      Nodes =
+        SELECT t
+        FROM   Nodes:s -(link_to:e)- :t
+        WHERE  t.@visited == FALSE 
+               AND level IN e.level_set
+        ACCUM  @@edge_set += e
+        POST-ACCUM
+               t.@visited = TRUE,
+               FOREACH i IN RANGE[0, d] DO
+                 t.@distance += pow(@@input_x.get(i) - t.x.get(i), 2),
+                 IF t.@distance > @@max_dist THEN
+                   BREAK
+                 END
+               END,
+               IF t.@distance < @@max_dist THEN
+                 @@min_heap += MyTuple(t, t.@distance)
+               END,
+               @@visited_nodes += t
+        ORDER BY t.@distance ASC
+        LIMIT  1
+      ;
+      // if a local minimum is reached, go to next level
+      IF @@min_heap.top().dist > @@max_dist - 0.0000001 THEN
+        BREAK;
+      END;
+      // set the maximum distance and the entry point
+      @@max_dist = @@min_heap.top().dist;
+      Ep = Nodes;
+      PRINT Nodes[Nodes.@distance];
+    END;
+    // next level
+    level = level - 1;
+    PRINT level;
+  END;
+
+  // reset @visited
+  VisitedNodes = {@@visited_nodes};
+  VisitedNodes = VisitedNodes MINUS Ep;
+  VisitedNodes =
+    SELECT s
+    FROM   VisitedNodes:s
+    POST-ACCUM
+           s.@visited = FALSE
+  ;
+  @@visited_nodes.clear();
+
+  // find ef nearest elements at the layer 1 by the greedy search algorithm
+  @@min_heap.resize(ef);
+  Nodes = Ep;
+  BOOL is_first = TRUE;
+  WHILE Nodes.size() > 0 LIMIT hop DO
+    // evaluate the neighborhood of the previously non-evaluated element
+    Nodes =
+      SELECT t
+      FROM   Nodes:s -(link_to:e)- :t
+      WHERE  t.@visited == FALSE 
+             AND level IN e.level_set
+      ACCUM  @@edge_set += e
+      POST-ACCUM
+             t.@visited = TRUE,
+             FOREACH i IN RANGE[0, d] DO
+               t.@distance += pow(@@input_x.get(i) - t.x.get(i), 2),
+               IF @@min_heap.size() == ef AND t.@distance > @@max_dist THEN
+                 BREAK
+               END
+             END,
+             IF @@min_heap.size() < ef OR t.@distance < @@max_dist THEN
+               @@min_heap += MyTuple(t, t.@distance)
+             END
+    ;
+    PRINT Nodes[Nodes.@distance];
+    // calculate the maximum distance
+    prev_max_dist = @@max_dist;
+    @@max_dist = 0;
+    FOREACH tp IN @@min_heap DO
+      @@max_dist += tp.dist;
+    END;
+    PRINT prev_max_dist, @@max_dist, is_first;
+    // if a local minimum is reached, go to next level
+    IF @@min_heap.size() == ef THEN
+      IF @@max_dist > prev_max_dist - 0.0000001 AND NOT is_first THEN
+        BREAK;
+      END;
+      IF is_first THEN
+        is_first = FALSE;
+      END;
+    END;
+    // set the entry point
+    Nodes =
+      SELECT s
+      FROM   Nodes:s
+      WHERE  s.@distance < @@max_dist + 0.0000001
+    ;
+  END;
+
+  // print the k nearest neighbors
+  @@min_heap.resize(k);
+  PRINT @@min_heap;
+  PRINT @@edge_set;
+}

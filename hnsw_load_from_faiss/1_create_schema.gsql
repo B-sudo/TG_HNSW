@@ -1,0 +1,20 @@
+
+# 1. Create graph
+CREATE GRAPH HNSW ()
+
+# 2. Create schema_change job
+CREATE SCHEMA_CHANGE JOB change_schema_of_HNSW FOR GRAPH HNSW {
+  # 2.1 Create vertices
+  ADD VERTEX Element(PRIMARY_ID id STRING, x LIST<DOUBLE>) WITH PRIMARY_ID_AS_ATTRIBUTE="true";
+  ADD VERTEX EntryPoint(PRIMARY_ID id INT);
+
+  # 2.2 Create edges
+  ADD DIRECTED EDGE link_to(FROM Element, TO Element, level_set SET<INT>);
+  ADD DIRECTED EDGE entrypoint_element(FROM EntryPoint, TO Element);
+}
+
+# 3. Run schema_change job
+RUN SCHEMA_CHANGE JOB change_schema_of_HNSW
+
+# 4. Drop schema_change job
+DROP JOB change_schema_of_HNSW
