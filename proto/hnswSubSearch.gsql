@@ -1,7 +1,7 @@
 USE GRAPH Hnsw
 
 CREATE QUERY hnsw_search_layer(VERTEX<RootNode> q, SET<Vertex<RootNode>> ep, INT ef, INT l) 
-FOR GRAPH Hnsw RETURNS (SET<Vertex<RootNode>>) SYNTAX V2 {
+FOR GRAPH Hnsw RETURNS (SET<Vertex<RootNode>>) {
 
     /*
     Input: Query Vertex q 
@@ -18,15 +18,16 @@ FOR GRAPH Hnsw RETURNS (SET<Vertex<RootNode>>) SYNTAX V2 {
     HeapAccum<Vertex_Item>(2147483647, distance DESC) @@result;
     MaxAccum<FLOAT> @dis;
     SetAccum<Vertex<RootNode>> @@vertex_result;
-
+LOG(TRUE,"search layer start\n");
     start = ep;
-
+LOG(TRUE, "compute point 0");
     a = SELECT s FROM start:s
         ACCUM s.@visited += TRUE,
             s.@dis += vector_distance_euclidean_straight(s.embedding, q.embedding, s.dim),
             @@candidate += Vertex_Item(s, s.@dis),
             @@result += Vertex_Item(s, s.@dis);
-
+LOG(TRUE, "compute point 1");
+//(0.074 ms) |Hnsw::default,16908524.RESTPP_1_1.1688399639075.N,YNN,16,0,0,0,S|UDF::Finished iteration 1 which did 0 edge maps and 1 vertex maps (in 0.055 ms)
     /* Each element in candidate and result has a computed @dis */
     
     WHILE @@candidate.size() > 0 DO
@@ -43,8 +44,8 @@ FOR GRAPH Hnsw RETURNS (SET<Vertex<RootNode>>) SYNTAX V2 {
         @@seed += @@enode;
         start = @@seed;
 
-        
-        neighbors = SELECT e FROM start:s -(Link:u)- RootNode:e
+LOG(TRUE, "compute point 2");
+        neighbors = SELECT e FROM start:s -(LinkTo:u)- RootNode:e
             WHERE u.level == l AND NOT e.@visited
             ACCUM 
                 e.@visited += TRUE,
@@ -53,7 +54,8 @@ FOR GRAPH Hnsw RETURNS (SET<Vertex<RootNode>>) SYNTAX V2 {
                     THEN @@candidate += Vertex_Item(e, e.@dis),
                     @@result += Vertex_Item(e, e.@dis)
                     END;        /* If e is close enough to q or @@result just needs some elements */
-        
+LOG(TRUE, "compute point 3");
+//(0.354 ms) |Hnsw::default,16908524.RESTPP_1_1.1688399639075.N,YNN,16,0,0,0,S|UDF::Finished iteration 39 which did 31 edge maps and 0 vertex maps (in 0.156 ms)
         WHILE @@result.size() > ef DO
             @@result.pop();
         END;
@@ -62,13 +64,13 @@ FOR GRAPH Hnsw RETURNS (SET<Vertex<RootNode>>) SYNTAX V2 {
     WHILE @@result.size() > 0 DO
         @@vertex_result += @@result.pop().node;
     END;
-
+LOG(TRUE, "search layer end");
     RETURN @@vertex_result;
 }
 
 
 CREATE QUERY hnsw_select_neighbors_heuristic(VERTEX<RootNode> q, SET<Vertex<RootNode>> C, INT M, INT l, BOOL extendCandidates, BOOL keepPrunedConnections)
-FOR GRAPH Hnsw RETURNS (SET<Vertex<RootNode>>) SYNTAX V2 {
+FOR GRAPH Hnsw RETURNS (SET<Vertex<RootNode>>) {
     /* 
     Input: Query Vertex q
         Candidate Vertex C 
@@ -85,18 +87,19 @@ FOR GRAPH Hnsw RETURNS (SET<Vertex<RootNode>>) SYNTAX V2 {
     HeapAccum<Vertex_Item>(2147483647, distance ASC) @@work_queue;
     HeapAccum<Vertex_Item>(2147483647, distance ASC) @@discard_queue;
     SetAccum<Vertex<RootNode>> @@start=C;
-
+LOG(TRUE, "select neighbor start");
     seed = C;
     IF extendCandidates 
-        THEN a = SELECT t FROM seed:s -(Link:u)- RootNode:t
+        THEN a = SELECT t FROM seed:s -(LinkTo:u)- RootNode:t
             WHERE u.level == l
             ACCUM @@start += t;
     END;
-
+LOG(TRUE, "compute point 4");
     seed = @@start;
     a = SELECT s FROM seed:s
     ACCUM @@work_queue += Vertex_Item(s, vector_distance_euclidean_straight(s.embedding, q.embedding, s.dim));
-
+LOG(TRUE, "compute point 5");
+//(1.311 ms) |Hnsw::default,16777451.RESTPP_1_1.1688399638320.N,YNN,16,0,0,0,S|UDF::Finished iteration 1 which did 0 edge maps and 32 vertex maps (in 0.538 ms)
     WHILE (@@work_queue.size() > 0 AND @@result.size() < M) DO
         
         MaxAccum<FLOAT> @@edis = @@work_queue.top().distance;
@@ -104,17 +107,24 @@ FOR GRAPH Hnsw RETURNS (SET<Vertex<RootNode>>) SYNTAX V2 {
         ListAccum<DOUBLE> @@enode_embedding;
         OrAccum @@close_to_R = FALSE;
 
-        a = SELECT s FROM RootNode:s
-            WHERE s == @@enode
-            ACCUM @@enode_embedding += s.embedding;
+        SetAccum<Vertex<RootNode>> @@seed;
 
+        @@seed.clear();
+        @@seed += @@enode;
+        start = @@seed;
+
+        a = SELECT s FROM start:s
+            WHERE s == @@enode
+            ACCUM @@enode_embedding += s.embedding;         //1ms Finished iteration 227 which did 0 edge maps and 1010 vertex maps
+            //(0.079 ms) |Hnsw::default,16843008.RESTPP_1_1.1688412680607.N,YNN,15,0,0,0,S|UDF::Finished iteration 61 which did 0 edge maps and 1 vertex maps (in 0.04 ms)
+LOG(TRUE, "compute point 6");
         seed = @@result;
         /* If @@enode is closer to one of currently selected vertexs, than we discard it to avoid clustering */
         a = SELECT s FROM seed:s
             ACCUM IF vector_distance_euclidean_straight(s.embedding, @@enode_embedding, s.dim) < @@edis
                 THEN @@close_to_R += TRUE
-                END;
-
+                END;                                    //0.2ms Finished iteration 228 which did 0 edge maps and 13 vertex maps 
+LOG(TRUE, "compute point 7");
         IF NOT @@close_to_R
             THEN @@result += @@enode;
         ELSE @@discard_queue += Vertex_Item(@@enode, @@edis);
@@ -126,7 +136,7 @@ FOR GRAPH Hnsw RETURNS (SET<Vertex<RootNode>>) SYNTAX V2 {
             @@result += @@discard_queue.pop().node;
             END;
     END;
-    
+LOG(TRUE, "select neighbor end");
     RETURN @@result;
 }
 

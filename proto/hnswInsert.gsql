@@ -1,7 +1,7 @@
 USE GRAPH Hnsw
 
 CREATE QUERY hnsw_insert(VERTEX<RootNode> q, INT M, INT efConstruction, FLOAT mL) 
-FOR GRAPH Hnsw SYNTAX V2 {
+FOR GRAPH Hnsw {
 
     /*
     This query inserts a new vexter to a HNSW graph.
@@ -14,6 +14,7 @@ FOR GRAPH Hnsw SYNTAX V2 {
     */
 
     TYPEDEF TUPLE <INT ep_id, INT top_level> Meta_Data;
+    TYPEDEF TUPLE<VERTEX<RootNode> element, DOUBLE dist> Vertex_Item;
 
     MaxAccum<Meta_Data> @@meta; /*current meta data of HNSW graph, including global entry point and the highest level*/
     MaxAccum<INT> @@l;
@@ -56,47 +57,53 @@ FOR GRAPH Hnsw SYNTAX V2 {
     @@min_l += @@l;
     @@min_l += @@meta.top_level;
 
-    SetAccum<Vertex<RootNode>> @eConn;
-    SetAccum<Vertex<RootNode>> @eNewConn;
-    SetAccum<Vertex<RootNode>> @eMinusConn;
+    HeapAccum<Vertex_Item>(1, dist DESC) @farest;
+    SumAccum<INT> @cur_outdegree;
 
     FOREACH cur_level IN RANGE[@@min_l, 0].step(-1) DO
         MaxAccum<INT> @@Mmax;
         IF cur_level == 0 THEN @@Mmax = 2*M; ELSE @@Mmax = M; END;
-
+LOG(TRUE, "insert point 0");
         @@W.clear();
         @@W = hnsw_search_layer(q, @@entry_point, efConstruction, cur_level);
         neighbors = hnsw_select_neighbors_heuristic(q, @@W, @@Mmax, cur_level, FALSE, TRUE);    /* select neighbors of q */
-
+//(65.309 ms)
+LOG(TRUE, "insert point 1");
         b = SELECT e FROM neighbors:e
-            ACCUM INSERT INTO Link VALUES (e RootNode, q RootNode, cur_level)
-            POST-ACCUM e.@eConn.clear(),
-                e.@eNewConn.clear(),
-                e.@eMinusConn.clear();
+            ACCUM 
+                INSERT INTO LinkTo VALUES (q RootNode, e RootNode, cur_level),
+                INSERT INTO LinkTo VALUES (e RootNode, q RootNode, cur_level),
+                e.@farest += Vertex_Item(q, vector_distance_euclidean_straight(e.embedding, q.embedding, e.dim)),
+                e.@cur_outdegree += 1
+            ;
 
+//(119.177 ms) |Hnsw::default,16777469.RESTPP_1_1.1688412677257.N,YNN,16,0,0,0,S|UDF::Finished iteration 10 which did 0 edge maps and 32 vertex maps (in 118.06 ms), 32 vertex reduces (in 1.096 ms), and activated 32 vertices.
+LOG(TRUE, "insert point 2");
         /* Each vertex link to max to Mmax vertexs. After Edge Insertion, neighbors of q may exceed this limitation.
             Thus, they need to select which links to remain, that is @eNewConn; and which to delete, that is @eMinusConn.*/
-        b = SELECT e FROM neighbors:e - (Link:u) - RootNode:s
+        b = SELECT e FROM neighbors:e - (LinkTo:u) - RootNode:s
             WHERE u.level == cur_level
             ACCUM 
-                e.@eConn += s      //store all neighbors of e to e.@eConn
-            POST-ACCUM IF e.@eConn.size() >= @@Mmax // if the number of neighbors of e is too large, shrink
-                THEN e.@eNewConn = hnsw_select_neighbors_heuristic(q, e.@eConn, @@Mmax-1, cur_level, FALSE, TRUE),
-                    e.@eMinusConn = e.@eConn MINUS e.@eNewConn  //get links to be deleted
-                END;
-/*
-        b = SELECT e FROM neighbors:e
-            ACCUM
-                IF e.@eConn.size() >= @@Mmax // if the number of neighbors of e is too large, shrink
-                THEN e.@eNewConn = hnsw_select_neighbors_heuristic(q, e.@eConn, @@Mmax-1, cur_level, FALSE, TRUE),
-                    e.@eMinusConn = e.@eConn MINUS e.@eNewConn  //get links to be deleted
-                END;
-*/
-        /* Delete redundent links of neighbors*/
-        b = SELECT e FROM neighbors:e - (Link:u) - RootNode:s
-            WHERE u.level == cur_level AND e.@eMinusConn.contains(s)
-            ACCUM DELETE(u);
+                e.@farest += Vertex_Item(s, vector_distance_euclidean_straight(e.embedding, s.embedding, e.dim)),
+                e.@cur_outdegree += 1
+            ;
+                
 
+//(99.489 ms) |Hnsw::default,16908542.RESTPP_1_1.1688412678096.N,YNN,15,0,0,0,S|UDF::Finished iteration 5 which did 1157 edge maps and 0 vertex maps (in 1.007 ms), 32 vertex reduces (in 98.446 ms), and activated 32 vertices.
+LOG(TRUE, "insert point 3");
+        /* Delete redundent links of neighbors*/
+        b = SELECT e FROM neighbors:e - (LinkTo:u) - RootNode:s
+            WHERE u.level == cur_level AND s == e.@farest.top().element
+            ACCUM   
+                IF e.@cur_outdegree > @@Mmax
+                THEN DELETE(u)
+                END
+            POST-ACCUM
+                e.@farest.clear(),
+                e.@cur_outdegree = 0
+            ;
+//(1.685 ms) |Hnsw::default,16777469.RESTPP_1_1.1688412677257.N,YNN,16,0,0,0,S|UDF::Finished iteration 12 which did 1635 edge maps and 0 vertex maps (in 1.339 ms), 21 vertex reduces (in 0.316 ms), and activated 21 vertices.
+LOG(TRUE, "insert point 4");
         @@entry_point.clear();
         @@entry_point = @@W;
     END;

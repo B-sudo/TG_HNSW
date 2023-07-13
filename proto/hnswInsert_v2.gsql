@@ -1,0 +1,106 @@
+USE GRAPH Hnsw
+
+CREATE QUERY hnsw_insert_v2(VERTEX<RootNode> q, INT M, INT efConstruction, FLOAT mL) 
+FOR GRAPH Hnsw SYNTAX V2 {
+
+    /*
+    This query inserts a new vexter to a HNSW graph.
+    Since all vertexs have been loaded, this query only cares about edges insert and delete.
+
+    Input: Query Vertex q
+        Maximum number of connections for each element per layer M
+        Size of the dynamic candidate list efConstruction
+        Normalization factor for level generation mL
+    */
+
+
+    TYPEDEF TUPLE <INT ep_id, INT top_level> Meta_Data;
+    TYPEDEF TUPLE<VERTEX<RootNode> element, DOUBLE dist> Vertex_Item;
+
+    MaxAccum<Meta_Data> @@meta; /*current meta data of HNSW graph, including global entry point and the highest level*/
+    MaxAccum<INT> @@l;
+    MaxAccum<INT> @@query_id;
+    HeapAccum<Vertex_Item>(1, dist ASC) @@nearest;
+    MinAccum<DOUBLE> @@dnearest;
+
+    OrAccum @visited;
+    MaxAccum<DOUBLE> @dist;
+    SetAccum<VERTEX<RootNode>> @@visited_nodes;
+
+
+    a = SELECT m FROM MetaNode:m
+        ACCUM @@meta += Meta_Data(m.ep_id, m.top_level);
+
+    @@l += floor(-log(1-rand()*0.999999999) * mL);  /* Randomly generate a maxlevel for the newly inserted vertex q */
+
+    S = {q};
+
+    b = SELECT s FROM S:s
+        POST-ACCUM s.maxlevel = @@l,
+            @@query_id += s.id;         /* Update the maxlevel of q */
+
+    /* The first inserted vector */
+    IF @@meta.ep_id == -1
+        THEN UPDATE m FROM MetaNode:m
+                SET m.ep_id = @@query_id,
+                    m.top_level = @@l;
+            RETURN ;
+    END;
+
+    Nodes = SELECT s FROM RootNode:s
+        WHERE s.id == @@meta.ep_id
+        POST-ACCUM 
+            s.@visited += TRUE,
+            s.@dist += vector_distance_euclidean_straight(s.embedding, q.embedding, s.dim),
+            @@nearest += Vertex_Item(s, s.@dist),
+            @@dnearest += s.@dist;
+
+    Ep = Nodes;
+
+    FOREACH cur_level IN RANGE[@@meta.top_level, @@l + 1].step(-1) DO   /* Quickly down to levels that need to add links to q */
+        
+        Nodes = Ep;
+        WHILE Nodes.size() > 0 DO
+        // evaluate the neighborhood of the closest previously non-evaluated element
+            Nodes =
+                SELECT t
+                FROM   Nodes:s -(LinkTo:e)- :t
+                WHERE  t.@visited == FALSE 
+                    AND cur_level == e.level
+                ACCUM
+                    t.@visited += TRUE,
+                    t.@dist += vector_distance_euclidean_straight(t.embedding, q.embedding, t.dim),
+                    IF t.@dist < @@dnearest THEN
+                        @@nearest += Vertex_Item(t, t.@dist)
+                    END,
+                    @@visited_nodes += t
+                ORDER BY t.@dist ASC
+                LIMIT  1
+            ;
+            // if a local minimum is reached, go to next level
+            IF @@nearest.top().dist > @@dnearest - 0.0000001 THEN
+                BREAK;
+            END;
+            @@dnearest = @@nearest.top().dist;
+            Ep = Nodes;
+        END;
+
+    END;
+
+    // reset @visited
+    VisitedNodes = {@@visited_nodes};
+    VisitedNodes = VisitedNodes MINUS Ep;
+    VisitedNodes =
+        SELECT s
+        FROM   VisitedNodes:s
+        POST-ACCUM
+            s.@visited = FALSE
+    ;
+    @@visited_nodes.clear();
+
+    MinAccum<INT> @@min_l;
+    @@min_l += @@l;
+    @@min_l += @@meta.top_level;
+
+
+}
