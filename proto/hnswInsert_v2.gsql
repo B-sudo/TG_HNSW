@@ -1,7 +1,7 @@
 USE GRAPH Hnsw
 
 CREATE QUERY hnsw_insert_v2(VERTEX<RootNode> q, INT M, INT efConstruction, FLOAT mL) 
-FOR GRAPH Hnsw SYNTAX V2 {
+FOR GRAPH Hnsw {
 
     /*
     This query inserts a new vexter to a HNSW graph.
@@ -21,7 +21,8 @@ FOR GRAPH Hnsw SYNTAX V2 {
     MaxAccum<INT> @@l;
     MaxAccum<INT> @@query_id;
     HeapAccum<Vertex_Item>(1, dist ASC) @@nearest;
-    MinAccum<DOUBLE> @@dnearest;
+    DOUBLE prev_max_dist;
+    MaxAccum<DOUBLE> @@max_dist;
 
     OrAccum @visited;
     MaxAccum<DOUBLE> @dist;
@@ -53,11 +54,11 @@ FOR GRAPH Hnsw SYNTAX V2 {
             s.@visited += TRUE,
             s.@dist += vector_distance_euclidean_straight(s.embedding, q.embedding, s.dim),
             @@nearest += Vertex_Item(s, s.@dist),
-            @@dnearest += s.@dist;
+            @@max_dist += s.@dist;
 
     Ep = Nodes;
-
-    FOREACH cur_level IN RANGE[@@meta.top_level, @@l + 1].step(-1) DO   /* Quickly down to levels that need to add links to q */
+    
+    FOREACH cur_level IN RANGE[@@meta.top_level, @@l + 1].step(-1) DO    //Quickly down to levels that need to add links to q 
         
         Nodes = Ep;
         WHILE Nodes.size() > 0 DO
@@ -67,10 +68,10 @@ FOR GRAPH Hnsw SYNTAX V2 {
                 FROM   Nodes:s -(LinkTo:e)- :t
                 WHERE  t.@visited == FALSE 
                     AND cur_level == e.level
-                ACCUM
+                POST-ACCUM
                     t.@visited += TRUE,
                     t.@dist += vector_distance_euclidean_straight(t.embedding, q.embedding, t.dim),
-                    IF t.@dist < @@dnearest THEN
+                    IF t.@dist < @@max_dist THEN
                         @@nearest += Vertex_Item(t, t.@dist)
                     END,
                     @@visited_nodes += t
@@ -78,10 +79,10 @@ FOR GRAPH Hnsw SYNTAX V2 {
                 LIMIT  1
             ;
             // if a local minimum is reached, go to next level
-            IF @@nearest.top().dist > @@dnearest - 0.0000001 THEN
+            IF @@nearest.top().dist > @@max_dist - 0.0000001 THEN
                 BREAK;
             END;
-            @@dnearest = @@nearest.top().dist;
+            @@max_dist = @@nearest.top().dist;
             Ep = Nodes;
         END;
 
@@ -97,10 +98,187 @@ FOR GRAPH Hnsw SYNTAX V2 {
             s.@visited = FALSE
     ;
     @@visited_nodes.clear();
+    
+
+    FOREACH cur_level IN RANGE[@@meta.top_level, @@l + 1].step(-1) DO   /* Quickly down to levels that need to add links to q */
+        Nodes = hnsw_search_layer(q, Ep, 1, cur_level);
+        Ep = Nodes;
+    END;
+
+    b = SELECT t FROM Ep:t
+        ACCUM t.@visited += TRUE,
+            t.@dist += vector_distance_euclidean_straight(t.embedding, q.embedding, t.dim),
+            @@nearest += Vertex_Item(t,t.@dist),
+            @@max_dist += t.@dist;
 
     MinAccum<INT> @@min_l;
     @@min_l += @@l;
     @@min_l += @@meta.top_level;
 
+    HeapAccum<Vertex_Item>(1, dist DESC) @farest;
+    SumAccum<INT> @cur_outdegree;
 
+    HeapAccum<Vertex_Item>(1, dist ASC) @@nearest_copy = @@nearest;
+    @@nearest.resize(efConstruction);
+    Nodes = Ep;
+    BOOL is_first = TRUE;
+
+    DOUBLE dnearest = @@max_dist;
+
+    FOREACH cur_level IN RANGE[@@min_l, 0].step(-1) DO
+        MaxAccum<INT> @@Mmax;
+        IF cur_level == 0 THEN @@Mmax = 2*M; ELSE @@Mmax = M; END;
+
+        /* Search efConstruction nearest neighbors */
+        WHILE Nodes.size() > 0 DO
+                // evaluate the neighborhood of the previously non-evaluated element
+            Nodes =
+                SELECT t
+                FROM   Nodes:s -(LinkTo:e)- RootNode:t
+                WHERE  t.@visited == FALSE 
+                    AND cur_level == e.level
+                POST-ACCUM
+                    t.@visited += TRUE,
+                    t.@dist += vector_distance_euclidean_straight(t.embedding, q.embedding, t.dim),
+                    @@visited_nodes += t,
+                    IF (@@nearest.size() < efConstruction OR t.@dist < @@max_dist)
+                    THEN @@nearest += Vertex_Item(t, t.@dist)
+                    END
+            ;
+
+            prev_max_dist = @@max_dist;
+            @@max_dist = 0;
+            FOREACH tp IN @@nearest DO
+                @@max_dist += tp.dist;
+            END;
+
+            // if a local minimum is reached, go to next level
+            IF @@nearest.size() == efConstruction
+            THEN IF @@max_dist > prev_max_dist - 0.0000001 AND NOT is_first 
+                THEN BREAK;
+                END;
+                IF is_first 
+                THEN is_first = FALSE;
+                END;
+            END;
+
+            // set the entry point
+            Nodes =
+                SELECT s
+                FROM   Nodes:s
+                WHERE  s.@dist < @@max_dist + 0.0000001
+            ;
+        END;
+
+
+        /* Select Mmax neighbors */
+
+        SetAccum<Vertex<RootNode>> @@SelectedNeighbors;
+        SetAccum<Vertex<RootNode>> @@EntryPoints;
+        HeapAccum<Vertex_Item>(efConstruction, dist ASC) @@DiscardQueue;
+        AndAccum @@good;
+
+        @@EntryPoints.clear();
+        @@SelectedNeighbors.clear();
+        @@DiscardQueue.clear();
+        
+        FOREACH tp in @@nearest DO
+            @@good = TRUE;
+            @@EntryPoints += tp.element;
+            MaxAccum<Vertex> @@enode = tp.element;
+            ListAccum<DOUBLE> @@enode_embedding;
+
+            SetAccum<Vertex<RootNode>> @@seed;
+
+            @@seed.clear();
+            @@enode_embedding.clear();
+            @@seed += @@enode;
+            start = @@seed;
+
+            b = SELECT t FROM start:t
+                ACCUM @@enode_embedding += t.embedding;
+
+            neighbors = @@SelectedNeighbors;
+
+            IF neighbors.size() == 0 
+            THEN @@SelectedNeighbors += tp.element;
+            ELSE IF neighbors.size() == @@Mmax THEN CONTINUE;
+            ELSE
+                b = SELECT t FROM neighbors:t
+                    ACCUM IF vector_distance_euclidean_straight(t.embedding, @@enode_embedding, t.dim) < tp.dist 
+                            THEN @@good += FALSE 
+                            END;
+
+                IF @@good 
+                THEN @@SelectedNeighbors += tp.element; 
+                ELSE @@DiscardQueue += tp;
+                END;
+            END;
+        END;
+
+        WHILE @@DiscardQueue.size() > 0 AND @@SelectedNeighbors.size() < @@Mmax DO
+            @@SelectedNeighbors += @@DiscardQueue.pop().element;
+        END;
+
+        neighbors = @@SelectedNeighbors;
+
+        /* Insert edges */
+        b = SELECT e FROM neighbors:e
+            ACCUM 
+                INSERT INTO LinkTo VALUES (q RootNode, e RootNode, cur_level),
+                INSERT INTO LinkTo VALUES (e RootNode, q RootNode, cur_level),
+                e.@farest += Vertex_Item(q, vector_distance_euclidean_straight(e.embedding, q.embedding, e.dim)),
+                e.@cur_outdegree += 1
+            ;
+
+        /* Detect overfilled neighbors */
+        b = SELECT e FROM neighbors:e - (LinkTo:u) - RootNode:s
+            WHERE u.level == cur_level
+            ACCUM 
+                e.@farest += Vertex_Item(s, vector_distance_euclidean_straight(e.embedding, s.embedding, e.dim)),
+                e.@cur_outdegree += 1
+            ;
+
+        /* Delete redundent links of neighbors*/
+        b = SELECT e FROM neighbors:e - (LinkTo:u) - RootNode:s
+            WHERE u.level == cur_level AND s == e.@farest.top().element
+            ACCUM   
+                IF e.@cur_outdegree > @@Mmax
+                THEN DELETE(u)
+                END
+            POST-ACCUM
+                e.@farest.clear(),
+                e.@cur_outdegree = 0
+            ;
+
+        Nodes = Ep;
+        @@nearest.clear();
+        @@nearest += @@nearest_copy.top();
+        @@max_dist = dnearest;
+
+        is_first = TRUE;
+
+        // reset @visited
+        VisitedNodes = {@@visited_nodes};
+        VisitedNodes = VisitedNodes MINUS Ep;
+        VisitedNodes =
+            SELECT s
+            FROM   VisitedNodes:s
+            POST-ACCUM
+                s.@visited = FALSE,
+                s.@dist = 0
+            ;
+        @@visited_nodes.clear();
+
+    END;
+
+    /* A new highest level means a new global entry point */
+    IF @@l > @@meta.top_level 
+        THEN 
+            UPDATE m FROM MetaNode:m
+                SET m.ep_id = @@query_id,
+                    m.top_level = @@l;
+    END;
 }
+
+INSTALL QUERY hnsw_insert_v2

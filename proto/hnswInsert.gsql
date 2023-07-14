@@ -47,9 +47,7 @@ FOR GRAPH Hnsw {
     SetAccum<Vertex<RootNode>> @@W;
 
     FOREACH cur_level IN RANGE[@@meta.top_level, @@l + 1].step(-1) DO   /* Quickly down to levels that need to add links to q */
-        @@W.clear();
         @@W = hnsw_search_layer(q, @@entry_point, 1, cur_level);
-        @@entry_point.clear();
         @@entry_point = @@W;
     END;
 
@@ -64,7 +62,6 @@ FOR GRAPH Hnsw {
         MaxAccum<INT> @@Mmax;
         IF cur_level == 0 THEN @@Mmax = 2*M; ELSE @@Mmax = M; END;
 LOG(TRUE, "insert point 0");
-        @@W.clear();
         @@W = hnsw_search_layer(q, @@entry_point, efConstruction, cur_level);
         neighbors = hnsw_select_neighbors_heuristic(q, @@W, @@Mmax, cur_level, FALSE, TRUE);    /* select neighbors of q */
 //(65.309 ms)
@@ -88,8 +85,8 @@ LOG(TRUE, "insert point 2");
                 e.@cur_outdegree += 1
             ;
                 
-
-//(99.489 ms) |Hnsw::default,16908542.RESTPP_1_1.1688412678096.N,YNN,15,0,0,0,S|UDF::Finished iteration 5 which did 1157 edge maps and 0 vertex maps (in 1.007 ms), 32 vertex reduces (in 98.446 ms), and activated 32 vertices.
+//(99.489 ms)
+//(3.815 ms) |Hnsw::default,16908535.RESTPP_1_1.1689251433450.N,YNN,15,0,0,0,S|UDF::Finished iteration 11 which did 2489 edge maps and 0 vertex maps (in 3.604 ms), 32 vertex reduces (in 0.196 ms), and activated 32 vertices.
 LOG(TRUE, "insert point 3");
         /* Delete redundent links of neighbors*/
         b = SELECT e FROM neighbors:e - (LinkTo:u) - RootNode:s
@@ -102,7 +99,8 @@ LOG(TRUE, "insert point 3");
                 e.@farest.clear(),
                 e.@cur_outdegree = 0
             ;
-//(1.685 ms) |Hnsw::default,16777469.RESTPP_1_1.1688412677257.N,YNN,16,0,0,0,S|UDF::Finished iteration 12 which did 1635 edge maps and 0 vertex maps (in 1.339 ms), 21 vertex reduces (in 0.316 ms), and activated 21 vertices.
+//(1.685 ms)
+//(0.869 ms) |Hnsw::default,16908535.RESTPP_1_1.1689251433450.N,YNN,15,0,0,0,S|UDF::Finished iteration 12 which did 2489 edge maps and 0 vertex maps (in 0.763 ms), 11 vertex reduces (in 0.09 ms), and activated 11 vertices.
 LOG(TRUE, "insert point 4");
         @@entry_point.clear();
         @@entry_point = @@W;

@@ -17,7 +17,7 @@ FOR GRAPH Hnsw SYNTAX V2 {
         ACCUM @@queryset += v;
 
     FOREACH q in @@queryset DO
-        INT i;
+        float i;
         @@appro_set.clear();
         @@truth_set.clear();
         @@truth_heap.clear();
@@ -43,6 +43,7 @@ FOR GRAPH Hnsw SYNTAX V2 {
     PRINT @@recall;
     PRINT @@appro_set;
     PRINT @@truth_set;
+    PRINT @@intersec_set;
 }
 
 INSTALL QUERY hnsw_test

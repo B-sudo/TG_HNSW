@@ -9,7 +9,7 @@ PUT ExprFunctions FROM "./udf.hpp"
 /*Define two subqueries used in Insertion and KNN-Search */
 @hnswSubSearch.gsql
 
-@hnswInsert.gsql
+@hnswInsert_v2.gsql
 
 @hnswSearch.gsql
 
