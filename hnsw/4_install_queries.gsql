@@ -1,0 +1,8 @@
+USE GRAPH HNSW100M
+@queries/q1_search_vis.gsql
+@queries/q1_search.gsql
+@queries/q1_search_mod.gsql
+@queries/q2_explore.gsql
+@queries/q3_stats.gsql
+
+INSTALL QUERY *

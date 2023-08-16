@@ -107,7 +107,7 @@ int main() {
     float distance = 0;
     auto start_time = std::chrono::high_resolution_clock::now();
 
-    for (size_t j = 0; j < 100000000; j++){
+    for (size_t j = 0; j < 10000; j++){
         for (size_t i = 0; i < dim; i++){
             double diff = x[i] - x[3*dim+i];
             distance += diff * diff;

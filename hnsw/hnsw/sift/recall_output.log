@@ -1,0 +1,330 @@
+10 10
+query file parsing time: 25.302 ms.
+restful API calling time: 94394.778 ms.
+groundtruth file parsing time: 42.302 ms.
+recall calculation time: 84.84 ms.
+recall = 77.613%
+10 20
+query file parsing time: 19.805 ms.
+restful API calling time: 95743.955 ms.
+groundtruth file parsing time: 41.735 ms.
+recall calculation time: 99.174 ms.
+recall = 88.976%
+10 30
+query file parsing time: 19.678 ms.
+restful API calling time: 86363.588 ms.
+groundtruth file parsing time: 39.669 ms.
+recall calculation time: 91.799 ms.
+recall = 93.081%
+10 40
+query file parsing time: 20.288 ms.
+restful API calling time: 79409.262 ms.
+groundtruth file parsing time: 39.601 ms.
+recall calculation time: 87.183 ms.
+recall = 95.103%
+10 50
+query file parsing time: 19.871 ms.
+restful API calling time: 74886.079 ms.
+groundtruth file parsing time: 80.097 ms.
+recall calculation time: 70.08 ms.
+recall = 96.286%
+10 60
+query file parsing time: 15.404 ms.
+restful API calling time: 66786.816 ms.
+groundtruth file parsing time: 42.195 ms.
+recall calculation time: 94.001 ms.
+recall = 97.019%
+10 70
+query file parsing time: 19.675 ms.
+restful API calling time: 62339.863 ms.
+groundtruth file parsing time: 33.596 ms.
+recall calculation time: 61.687 ms.
+recall = 97.551%
+10 80
+query file parsing time: 12.697 ms.
+restful API calling time: 31202.511 ms.
+groundtruth file parsing time: 39.572 ms.
+recall calculation time: 93.549 ms.
+recall = 97.912%
+10 90
+query file parsing time: 23.028 ms.
+restful API calling time: 30129.219 ms.
+groundtruth file parsing time: 84.996 ms.
+recall calculation time: 77.64 ms.
+recall = 98.197%
+10 100
+query file parsing time: 23.951 ms.
+restful API calling time: 54050.226 ms.
+groundtruth file parsing time: 42.531 ms.
+recall calculation time: 96.747 ms.
+recall = 98.407%
+20 20
+query file parsing time: 19.948 ms.
+restful API calling time: 52206.502 ms.
+groundtruth file parsing time: 54.775 ms.
+recall calculation time: 200.935 ms.
+recall = 85.668%
+20 30
+query file parsing time: 24.465 ms.
+restful API calling time: 52678.121 ms.
+groundtruth file parsing time: 52.116 ms.
+recall calculation time: 157.694 ms.
+recall = 90.739%
+20 40
+query file parsing time: 20.707 ms.
+restful API calling time: 45861.032 ms.
+groundtruth file parsing time: 49.797 ms.
+recall calculation time: 135.808 ms.
+recall = 93.355%
+20 50
+query file parsing time: 17.034 ms.
+restful API calling time: 37053.016 ms.
+groundtruth file parsing time: 57.98 ms.
+recall calculation time: 209.069 ms.
+recall = 94.888%
+20 60
+query file parsing time: 21.044 ms.
+restful API calling time: 59067.441 ms.
+groundtruth file parsing time: 49.185 ms.
+recall calculation time: 168.735 ms.
+recall = 95.895%
+20 70
+query file parsing time: 22.897 ms.
+restful API calling time: 31368.41 ms.
+groundtruth file parsing time: 100.193 ms.
+recall calculation time: 114.243 ms.
+recall = 96.614%
+20 80
+query file parsing time: 14.664 ms.
+restful API calling time: 36332.643 ms.
+groundtruth file parsing time: 48.771 ms.
+recall calculation time: 184.88 ms.
+recall = 97.139%
+20 90
+query file parsing time: 19.766 ms.
+restful API calling time: 66326.39 ms.
+groundtruth file parsing time: 50.162 ms.
+recall calculation time: 164.35 ms.
+recall = 97.517%
+20 100
+query file parsing time: 16.243 ms.
+restful API calling time: 68420.488 ms.
+groundtruth file parsing time: 51.271 ms.
+recall calculation time: 167.632 ms.
+recall = 97.803%
+30 30
+query file parsing time: 21.097 ms.
+restful API calling time: 90872.875 ms.
+groundtruth file parsing time: 54.503 ms.
+recall calculation time: 220.474 ms.
+recall = 88.842%
+30 40
+query file parsing time: 20.542 ms.
+restful API calling time: 83166.586 ms.
+groundtruth file parsing time: 58.192 ms.
+recall calculation time: 219.625 ms.
+recall = 91.879%
+30 50
+query file parsing time: 20.813 ms.
+restful API calling time: 74645.118 ms.
+groundtruth file parsing time: 56.076 ms.
+recall calculation time: 241.446 ms.
+recall = 93.710%
+30 60
+query file parsing time: 20.596 ms.
+restful API calling time: 65868.241 ms.
+groundtruth file parsing time: 54.654 ms.
+recall calculation time: 237.802 ms.
+recall = 94.932%
+30 70
+query file parsing time: 20.173 ms.
+restful API calling time: 71551.308 ms.
+groundtruth file parsing time: 57.38 ms.
+recall calculation time: 212.418 ms.
+recall = 95.826%
+30 80
+query file parsing time: 15.809 ms.
+restful API calling time: 64625.088 ms.
+groundtruth file parsing time: 58.211 ms.
+recall calculation time: 236.186 ms.
+recall = 96.466%
+30 90
+query file parsing time: 20.795 ms.
+restful API calling time: 67666.43 ms.
+groundtruth file parsing time: 56.662 ms.
+recall calculation time: 215.726 ms.
+recall = 96.927%
+30 100
+query file parsing time: 20.166 ms.
+restful API calling time: 66187.296 ms.
+groundtruth file parsing time: 134.442 ms.
+recall calculation time: 209.224 ms.
+recall = 97.289%
+40 40
+query file parsing time: 16.518 ms.
+restful API calling time: 80939.207 ms.
+groundtruth file parsing time: 63.057 ms.
+recall calculation time: 281.054 ms.
+recall = 90.593%
+40 50
+query file parsing time: 20.488 ms.
+restful API calling time: 75592.993 ms.
+groundtruth file parsing time: 72.223 ms.
+recall calculation time: 292.124 ms.
+recall = 92.677%
+40 60
+query file parsing time: 16.569 ms.
+restful API calling time: 73997.454 ms.
+groundtruth file parsing time: 64.489 ms.
+recall calculation time: 290.604 ms.
+recall = 94.087%
+40 70
+query file parsing time: 20.684 ms.
+restful API calling time: 71540.086 ms.
+groundtruth file parsing time: 64.495 ms.
+recall calculation time: 290.024 ms.
+recall = 95.107%
+40 80
+query file parsing time: 16.146 ms.
+restful API calling time: 69096.691 ms.
+groundtruth file parsing time: 65.164 ms.
+recall calculation time: 281.927 ms.
+recall = 95.847%
+40 90
+query file parsing time: 19.934 ms.
+restful API calling time: 67804.647 ms.
+groundtruth file parsing time: 64.122 ms.
+recall calculation time: 294.055 ms.
+recall = 96.392%
+40 100
+query file parsing time: 19.701 ms.
+restful API calling time: 63277.561 ms.
+groundtruth file parsing time: 65.737 ms.
+recall calculation time: 267.674 ms.
+recall = 96.817%
+50 50
+query file parsing time: 14.158 ms.
+restful API calling time: 74169.164 ms.
+groundtruth file parsing time: 76.947 ms.
+recall calculation time: 366.172 ms.
+recall = 91.731%
+50 60
+query file parsing time: 20.984 ms.
+restful API calling time: 71688.418 ms.
+groundtruth file parsing time: 80.955 ms.
+recall calculation time: 363.249 ms.
+recall = 93.319%
+50 70
+query file parsing time: 22.353 ms.
+restful API calling time: 72335.905 ms.
+groundtruth file parsing time: 74.019 ms.
+recall calculation time: 359.618 ms.
+recall = 94.457%
+50 80
+query file parsing time: 20.39 ms.
+restful API calling time: 69114.591 ms.
+groundtruth file parsing time: 78.818 ms.
+recall calculation time: 377.179 ms.
+recall = 95.290%
+50 90
+query file parsing time: 20.937 ms.
+restful API calling time: 67949.226 ms.
+groundtruth file parsing time: 73.414 ms.
+recall calculation time: 362.559 ms.
+recall = 95.905%
+50 100
+query file parsing time: 15.802 ms.
+restful API calling time: 67431.0 ms.
+groundtruth file parsing time: 156.914 ms.
+recall calculation time: 376.497 ms.
+recall = 96.400%
+60 60
+query file parsing time: 21.934 ms.
+restful API calling time: 71088.322 ms.
+groundtruth file parsing time: 79.374 ms.
+recall calculation time: 498.044 ms.
+recall = 92.575%
+60 70
+query file parsing time: 20.334 ms.
+restful API calling time: 72648.479 ms.
+groundtruth file parsing time: 93.3 ms.
+recall calculation time: 496.543 ms.
+recall = 93.835%
+60 80
+query file parsing time: 16.383 ms.
+restful API calling time: 68525.764 ms.
+groundtruth file parsing time: 88.312 ms.
+recall calculation time: 505.464 ms.
+recall = 94.754%
+60 90
+query file parsing time: 22.101 ms.
+restful API calling time: 42551.91 ms.
+groundtruth file parsing time: 79.487 ms.
+recall calculation time: 447.727 ms.
+recall = 95.447%
+60 100
+query file parsing time: 20.141 ms.
+restful API calling time: 30665.631 ms.
+groundtruth file parsing time: 205.193 ms.
+recall calculation time: 579.68 ms.
+recall = 95.987%
+70 70
+query file parsing time: 20.384 ms.
+restful API calling time: 47652.317 ms.
+groundtruth file parsing time: 85.235 ms.
+recall calculation time: 572.395 ms.
+recall = 93.191%
+70 80
+query file parsing time: 22.325 ms.
+restful API calling time: 64231.678 ms.
+groundtruth file parsing time: 94.459 ms.
+recall calculation time: 604.526 ms.
+recall = 94.204%
+70 90
+query file parsing time: 15.56 ms.
+restful API calling time: 49309.072 ms.
+groundtruth file parsing time: 91.768 ms.
+recall calculation time: 542.676 ms.
+recall = 94.966%
+70 100
+query file parsing time: 18.88 ms.
+restful API calling time: 29955.52 ms.
+groundtruth file parsing time: 186.316 ms.
+recall calculation time: 491.416 ms.
+recall = 95.562%
+80 80
+query file parsing time: 16.937 ms.
+restful API calling time: 43610.757 ms.
+groundtruth file parsing time: 106.021 ms.
+recall calculation time: 695.831 ms.
+recall = 93.687%
+80 90
+query file parsing time: 20.573 ms.
+restful API calling time: 62197.14 ms.
+groundtruth file parsing time: 108.384 ms.
+recall calculation time: 878.079 ms.
+recall = 94.523%
+80 100
+query file parsing time: 19.475 ms.
+restful API calling time: 67570.341 ms.
+groundtruth file parsing time: 116.619 ms.
+recall calculation time: 751.202 ms.
+recall = 95.168%
+90 90
+query file parsing time: 21.01 ms.
+restful API calling time: 44328.539 ms.
+groundtruth file parsing time: 114.702 ms.
+recall calculation time: 910.939 ms.
+recall = 94.075%
+90 100
+query file parsing time: 21.414 ms.
+restful API calling time: 31683.019 ms.
+groundtruth file parsing time: 93.316 ms.
+recall calculation time: 816.83 ms.
+recall = 94.777%
+100 100
+query file parsing time: 17.072 ms.
+restful API calling time: 37774.238 ms.
+groundtruth file parsing time: 139.028 ms.
+recall calculation time: 1017.29 ms.
+recall = 94.411%

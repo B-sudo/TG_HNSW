@@ -1,0 +1,7 @@
+@1_create_schema.gsql
+
+@2.2_load_sift.gsql
+
+@3.2_load_hnsw_graph_sift.gsql
+
+@4_install_queries.gsql
