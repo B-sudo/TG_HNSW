@@ -1,0 +1,25 @@
+CREATE QUERY q1_search_batch(
+  STRING input_file, 
+  STRING output_file,
+  UINT k=10,
+  UINT ef_search=32,
+  UINT dim=128
+) FOR GRAPH NSG { 
+  ListAccum<STRING> @@query_set;
+  
+  @@query_set = {LOADACCUM (
+                input_file,
+                $1,
+                ",",
+                false)};
+  
+  FILE f (output_file);
+  
+  Nodes = SELECT t
+          FROM Element:t
+          WHERE str_to_int(t.id) < 10000;
+  
+  Nodes = SELECT t
+          FROM Nodes:t
+          ACCUM f.println(t.id, q1_search_sub(@@query_set.get(str_to_int(t.id)), k,ef_search,dim));
+}
