@@ -28,7 +28,7 @@ def threaded_process(n_thread, id_range, url, input_list):
     return store
 
 def main(k=10, ef_search=32):
-    url = "http://127.0.0.1:14240/restpp/query/NSG/q1_search_mod?k=" + str(k) + "&ef_search=" + str(ef_search) + "&input="
+    url = "http://127.0.0.1:14240/restpp/query/NSG/q2_search_mod?k=" + str(k) + "&ef_search=" + str(ef_search) + "&input="
     query_file = "/home/liu3529/Tigergraph/data/data/sift/sift_query.csv"
     groundtruth_file = "/home/liu3529/Tigergraph/data/data/sift/sift_groundtruth.csv"
     n_thread = 32
