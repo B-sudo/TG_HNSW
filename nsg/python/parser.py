@@ -3,8 +3,8 @@ def process_line(line):
     remaining_numbers = '|'.join(numbers[1:])
     return f'{numbers[0]},{remaining_numbers}'
 
-input_file = "/home/liu3529/Tigergraph/data/data/sift/sift_query.csv"
-output_file = "/home/liu3529/Tigergraph/data/data/sift/sift_query_parse.csv"
+input_file = "/home/liu3529/Tigergraph/data/data/sift100M/bigann_query.csv"
+output_file = "/home/liu3529/Tigergraph/data/data/sift100M/bigann_query_parse.csv"
 
 with open(input_file, "r") as csv_infile:
     with open(output_file, "w") as csv_outfile:

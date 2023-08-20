@@ -28,9 +28,9 @@ def threaded_process(n_thread, id_range, url, input_list):
     return store
 
 def main(k=10, ef_search=32):
-    url = "http://127.0.0.1:14240/restpp/query/NSG/q1_search_mod?k=" + str(k) + "&ef_search=" + str(ef_search) + "&input="
-    query_file = "/home/liu3529/Tigergraph/data/data/sift/sift_query.csv"
-    groundtruth_file = "/home/liu3529/Tigergraph/data/data/sift/sift_groundtruth.csv"
+    url = "http://127.0.0.1:14240/restpp/query/HNSW/q1_search?k=" + str(k) + "&ef_search=" + str(ef_search) + "&input="
+    query_file = "/home/tigergraph/data/hnsw/sift100M/bigann_query.csv"
+    groundtruth_file = "/home/tigergraph/data/hnsw/sift100M/bigann_groundtruth.csv"
     n_thread = 32
 
     # 1. query file parsing
@@ -71,34 +71,32 @@ def main(k=10, ef_search=32):
 
     # 4. calculate the recall 
     start_time = time.time()
-    true_positive = 0
-    hop_num = 0
-    visited_nodes_num = 0
-    for id in id_list:
-        min_heap = results[id][0]["@@min_heap"]
-        hop_num += results[id][1]["@@hop_num"]
-        visited_nodes_num += results[id][2]["@@visited_nodes_num"]
-        for item in min_heap:
-            if item["element"] in groundtruth[id]:
-                true_positive += 1
-    recall = true_positive / len(id_list) / k
-    avg_hop_num = hop_num / len(id_list)
-    avg_visited_nodes_num = visited_nodes_num/ len(id_list)
+    rank = 1
+    while rank <= k:
+        num = 0
+        for id in id_list:
+            min_heap = results[id][0]["@@min_heap"]
+            i = 0
+            for item in min_heap:
+                if groundtruth[id][0] == item["element"]:
+                    num += 1
+                    break
+                i = i + 1
+                if i >= rank:
+                    break
+        recall = num / len(id_list)
+        print(f"R@{rank}: {recall*100:.3f}%")
+        rank *= 10
     end_time = time.time()
     duration_ms = round((end_time - start_time) * 1000, 3)
     print("recall calculation time:", duration_ms, "ms.")
-    print(f"recall = {recall*100:.3f}%")
-    print(f"hop_num = {avg_hop_num:.3f}")
-    print(f"visited_nodes_num = {avg_visited_nodes_num:.3f}")
 
 if __name__ == "__main__":
-    '''
-    k_list = [10, 20, 30, 40, 50, 60, 70, 80, 90, 100]
-    ef_search_list = [10, 20, 30, 40, 50, 60, 70, 80, 90, 100]
+    k_list = [10, 20, 40, 80, 160, 320, 640, 1280]
+    ef_search_list = [10, 20, 40, 80, 160, 320, 640, 1280]
     for k in k_list:
         for ef_search in ef_search_list:
             if ef_search >= k:
                 print(k, ef_search)
-                main(k, ef_search)'''
-    main(10,70)
+                main(k, ef_search)
 
