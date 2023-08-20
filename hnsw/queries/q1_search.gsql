@@ -4,7 +4,7 @@ CREATE QUERY q1_search(
   UINT ef_search=32,
   UINT max_level=5,
   UINT dim=128
-) FOR GRAPH HNSW syntax v1{
+) FOR GRAPH HNSW100M syntax v1{
   TYPEDEF TUPLE<VERTEX<Element> element, DOUBLE dist> MyTuple;
   OrAccum @visited;
   SumAccum<DOUBLE> @distance;
